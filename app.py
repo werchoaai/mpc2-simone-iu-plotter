@@ -191,12 +191,7 @@ with col_left:
                 vc1.markdown(f"<span style='color:{c.color};font-weight:500'>{c.name}</span>", unsafe_allow_html=True)
                 vc2.code(f"{c.ocp:.1f}" if c.ocp is not None else "—", language=None)
                 vc3.code(f"{c.rpp:.1f}" if c.rpp is not None else "—", language=None)
-            # TSV download
-            tsv_lines = ["Kurve\tOCP_mV\tRPP_mV"]
-            for c in st.session_state.curves:
-                tsv_lines.append(f"{c.name}\t{c.ocp:.1f if c.ocp is not None else ''}\t{c.rpp:.1f if c.rpp is not None else ''}")
-            tsv_text = "\n".join(tsv_lines)
-            # Build TSV cleanly (the f-string trick above is fragile — rebuild)
+            # TSV download — build cleanly handling None values
             tsv_lines = ["Kurve\tOCP_mV\tRPP_mV"]
             for c in st.session_state.curves:
                 ocp_s = f"{c.ocp:.1f}" if c.ocp is not None else ""
