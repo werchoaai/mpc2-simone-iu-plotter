@@ -298,30 +298,27 @@ with col_right:
             hovermode="closest", height=620,
         )
         fig = go.Figure(data=traces, layout=layout)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(
+            fig,
+            use_container_width=True,
+            config={
+                "displaylogo": False,
+                "toImageButtonOptions": {
+                    "format": "png",
+                    "filename": (title_in or "IU_curve").replace(" ", "_")[:50],
+                    "width": 1400, "height": 800, "scale": 2,
+                },
+                "modeBarButtonsToRemove": ["lasso2d", "select2d"],
+            },
+        )
+        st.caption("📸 PNG speichern: Klicke auf das Kamera-Icon oben rechts im Diagramm.")
 
         sc1, sc2, sc3 = st.columns(3)
         sc1.metric(t("info_loaded"), f"{sum(1 for c in st.session_state.curves if c.visible)}/{len(st.session_state.curves)}")
         sc2.metric(t("info_total"), f"{total:,}")
         sc3.metric(t("info_displayed"), f"{displayed:,}")
 
-        # PNG + CSV export
-        ec1, ec2 = st.columns(2)
-
-        # PNG export via kaleido
-        try:
-            png_bytes = fig.to_image(format="png", width=1400, height=800, scale=2)
-            ec1.download_button(
-                "🖼️ " + t("export_png"),
-                data=png_bytes,
-                file_name=f"IU_Plot_{(title_in or 'curve').replace(' ', '_')[:40]}.png",
-                mime="image/png",
-                use_container_width=True,
-            )
-        except Exception as e:
-            ec1.warning(f"PNG-Export nicht verfügbar (kaleido fehlt): {e}")
-
-        # CSV export
+        # CSV export (PNG via Plotly toolbar camera icon)
         rows = []
         for c in st.session_state.curves:
             if not c.visible:
@@ -333,7 +330,7 @@ with col_right:
         if rows:
             df = pd.DataFrame(rows)
             csv = df.to_csv(sep=";", index=False).encode("utf-8")
-            ec2.download_button(
+            st.download_button(
                 "📥 " + t("export_csv"),
                 csv,
                 file_name="IU_data.csv",
