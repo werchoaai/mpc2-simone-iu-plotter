@@ -58,6 +58,8 @@ T = {
     "info_displayed": ("Angezeigt nach Reduktion", "Displayed after decimation"),
     "export_png": ("PNG speichern", "Save PNG"),
     "export_csv": ("CSV speichern", "Save CSV"),
+    "values_panel": ("Werte zum Kopieren", "Values to copy"),
+    "copy_tsv": ("Alle Werte als TSV (Excel) herunterladen", "Download all values as TSV (Excel)"),
 }
 def t(key): return T[key][0 if LANG == "DE" else 1]
 
@@ -180,6 +182,35 @@ with col_left:
             except Exception as e:
                 st.error(f"{f.name}: {e}")
 
+    # ─── Werte-Copy-Panel
+    if st.session_state.curves:
+        st.subheader("📋 " + t("values_panel"))
+        with st.container(border=True):
+            for c in st.session_state.curves:
+                vc1, vc2, vc3 = st.columns([2, 1, 1])
+                vc1.markdown(f"<span style='color:{c.color};font-weight:500'>{c.name}</span>", unsafe_allow_html=True)
+                vc2.code(f"{c.ocp:.1f}" if c.ocp is not None else "—", language=None)
+                vc3.code(f"{c.rpp:.1f}" if c.rpp is not None else "—", language=None)
+            # TSV download
+            tsv_lines = ["Kurve\tOCP_mV\tRPP_mV"]
+            for c in st.session_state.curves:
+                tsv_lines.append(f"{c.name}\t{c.ocp:.1f if c.ocp is not None else ''}\t{c.rpp:.1f if c.rpp is not None else ''}")
+            tsv_text = "\n".join(tsv_lines)
+            # Build TSV cleanly (the f-string trick above is fragile — rebuild)
+            tsv_lines = ["Kurve\tOCP_mV\tRPP_mV"]
+            for c in st.session_state.curves:
+                ocp_s = f"{c.ocp:.1f}" if c.ocp is not None else ""
+                rpp_s = f"{c.rpp:.1f}" if c.rpp is not None else ""
+                tsv_lines.append(f"{c.name}\t{ocp_s}\t{rpp_s}")
+            tsv_text = "\n".join(tsv_lines)
+            st.download_button(
+                "📋 " + t("copy_tsv"),
+                data=tsv_text,
+                file_name="IU_OCP_RPP_values.tsv",
+                mime="text/tab-separated-values",
+                use_container_width=True,
+            )
+
     st.subheader("🎨 " + t("curves"))
     if not st.session_state.curves:
         st.info(t("no_curves"))
@@ -274,6 +305,22 @@ with col_right:
         sc2.metric(t("info_total"), f"{total:,}")
         sc3.metric(t("info_displayed"), f"{displayed:,}")
 
+        # PNG + CSV export
+        ec1, ec2 = st.columns(2)
+
+        # PNG export via kaleido
+        try:
+            png_bytes = fig.to_image(format="png", width=1400, height=800, scale=2)
+            ec1.download_button(
+                "🖼️ " + t("export_png"),
+                data=png_bytes,
+                file_name=f"IU_Plot_{(title_in or 'curve').replace(' ', '_')[:40]}.png",
+                mime="image/png",
+                use_container_width=True,
+            )
+        except Exception as e:
+            ec1.warning(f"PNG-Export nicht verfügbar (kaleido fehlt): {e}")
+
         # CSV export
         rows = []
         for c in st.session_state.curves:
@@ -286,6 +333,12 @@ with col_right:
         if rows:
             df = pd.DataFrame(rows)
             csv = df.to_csv(sep=";", index=False).encode("utf-8")
-            st.download_button("📥 " + t("export_csv"), csv, file_name="IU_data.csv", mime="text/csv")
+            ec2.download_button(
+                "📥 " + t("export_csv"),
+                csv,
+                file_name="IU_data.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
 
 st.caption("MPC² × werchota.ai · Simone I-U Plotter v1.0 · 24.04.2026")
